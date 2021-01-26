@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Moryx.Logging;
 using Moryx.Serialization;
@@ -73,19 +74,26 @@ namespace Moryx.Communication.Sockets
         /// </summary>
         public void ConfigureKeepAlive(int interval, int timeout)
         {
-            // Create config array
-            var index = 0;
-            var socketConfig = new byte[12]; // 3 * 4 byte
-            InlineConverter.Include(1, socketConfig, ref index);
-            InlineConverter.Include(interval, socketConfig, ref index);
-            InlineConverter.Include(timeout, socketConfig, ref index);
+#if HAVE_RUNTIME_INFORMATION
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+#endif
+                // Create config array
+                var index = 0;
+                var socketConfig = new byte[12]; // 3 * 4 byte
+                InlineConverter.Include(1, socketConfig, ref index);
+                InlineConverter.Include(interval, socketConfig, ref index);
+                InlineConverter.Include(timeout, socketConfig, ref index);
 
-            // Configure socket
-            var socket = _client.Client;
-            socket.IOControl(IOControlCode.KeepAliveValues, socketConfig, null);
+                // Configure socket
+                var socket = _client.Client;
+                socket.IOControl(IOControlCode.KeepAliveValues, socketConfig, null);
+#if HAVE_RUNTIME_INFORMATION
+            }
+#endif
         }
 
-        #region Send
+#region Send
 
         /// <inheritdoc />
         public void Send(BinaryMessage message)
@@ -131,9 +139,9 @@ namespace Moryx.Communication.Sockets
             }
         }
 
-        #endregion
+#endregion
 
-        #region Receive
+#region Receive
 
         /// <summary>
         /// Start reading shit
@@ -224,7 +232,7 @@ namespace Moryx.Communication.Sockets
         ///
         public event EventHandler<BinaryMessage> Received;
 
-        #endregion
+#endregion
 
         private void Disconnect(Exception ex)
         {
